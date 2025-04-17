@@ -12,6 +12,7 @@ import MenuItemFormPage from "./pages/menu-items/MenuItemForm";
 import OrdersListPage from "./pages/orders/OrdersList";
 import OrderFormPage from "./pages/orders/OrderForm";
 import OrderDetailPage from "./pages/orders/OrderDetail";
+import ReportsListPage from "./pages/reports/ReportsList";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,8 @@ const App = () => (
           <Route path="/orders" element={<OrdersListPage />} />
           <Route path="/orders/new" element={<OrderFormPage />} />
           <Route path="/orders/:id" element={<OrderDetailPage />} />
+          
+          <Route path="/reports" element={<ReportsListPage />} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
