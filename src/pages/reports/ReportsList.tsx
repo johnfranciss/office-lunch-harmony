@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -6,12 +5,11 @@ import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ShoppingBag, FileBarChart, PieChart, ListChecked } from "lucide-react";
+import { ShoppingBag, FileBarChart, PieChart, ListCheck } from "lucide-react";
 import { mockOrders } from "@/data/mockData";
 import { formatCurrency } from "@/lib/formatters";
 import { Badge } from "@/components/ui/badge";
 
-// Sample data for reports
 const salesData = [
   { date: "Mon", sales: 1200 },
   { date: "Tue", sales: 1900 },
@@ -30,9 +28,7 @@ const categoryData = [
   { name: "Snacks", sales: 950 },
 ];
 
-// Process orders to get procurement summary
 const getProcurementSummary = () => {
-  // Group all order items by category and sum their quantities
   const categoryItemsMap = new Map();
   
   mockOrders.forEach(order => {
@@ -55,7 +51,6 @@ const getProcurementSummary = () => {
     });
   });
   
-  // Convert the map to an array structure for rendering
   const procurementSummary = [];
   categoryItemsMap.forEach((items, category) => {
     const categoryItems = [];
@@ -95,7 +90,7 @@ const ReportsList = () => {
               Category Analysis
             </TabsTrigger>
             <TabsTrigger value="employee" className="flex items-center gap-2">
-              <ListChecked className="h-4 w-4" />
+              <ListCheck className="h-4 w-4" />
               Employee Performance
             </TabsTrigger>
           </TabsList>
