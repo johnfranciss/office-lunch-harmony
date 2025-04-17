@@ -5,6 +5,11 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ShoppingBag, FileBarChart, PieChart, ListChecked } from "lucide-react";
+import { mockOrders } from "@/data/mockData";
+import { formatCurrency } from "@/lib/formatters";
+import { Badge } from "@/components/ui/badge";
 
 // Sample data for reports
 const salesData = [
@@ -25,6 +30,46 @@ const categoryData = [
   { name: "Snacks", sales: 950 },
 ];
 
+// Process orders to get procurement summary
+const getProcurementSummary = () => {
+  // Group all order items by category and sum their quantities
+  const categoryItemsMap = new Map();
+  
+  mockOrders.forEach(order => {
+    order.items.forEach(item => {
+      if (!item.menuItem) return;
+      
+      const category = item.menuItem.category;
+      if (!categoryItemsMap.has(category)) {
+        categoryItemsMap.set(category, new Map());
+      }
+      
+      const itemsInCategory = categoryItemsMap.get(category);
+      const itemName = item.menuItem.name;
+      
+      if (itemsInCategory.has(itemName)) {
+        itemsInCategory.set(itemName, itemsInCategory.get(itemName) + item.quantity);
+      } else {
+        itemsInCategory.set(itemName, item.quantity);
+      }
+    });
+  });
+  
+  // Convert the map to an array structure for rendering
+  const procurementSummary = [];
+  categoryItemsMap.forEach((items, category) => {
+    const categoryItems = [];
+    items.forEach((quantity, name) => {
+      categoryItems.push({ name, quantity });
+    });
+    procurementSummary.push({ category, items: categoryItems });
+  });
+  
+  return procurementSummary;
+};
+
+const procurementSummary = getProcurementSummary();
+
 const ReportsList = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
 
@@ -35,12 +80,75 @@ const ReportsList = () => {
           <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
         </div>
 
-        <Tabs defaultValue="sales">
+        <Tabs defaultValue="procurement">
           <TabsList className="mb-4">
-            <TabsTrigger value="sales">Sales Reports</TabsTrigger>
-            <TabsTrigger value="category">Category Analysis</TabsTrigger>
-            <TabsTrigger value="employee">Employee Performance</TabsTrigger>
+            <TabsTrigger value="procurement" className="flex items-center gap-2">
+              <ShoppingBag className="h-4 w-4" />
+              Procurement Summary
+            </TabsTrigger>
+            <TabsTrigger value="sales" className="flex items-center gap-2">
+              <FileBarChart className="h-4 w-4" />
+              Sales Reports
+            </TabsTrigger>
+            <TabsTrigger value="category" className="flex items-center gap-2">
+              <PieChart className="h-4 w-4" />
+              Category Analysis
+            </TabsTrigger>
+            <TabsTrigger value="employee" className="flex items-center gap-2">
+              <ListChecked className="h-4 w-4" />
+              Employee Performance
+            </TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="procurement" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Procurement Summary</CardTitle>
+                <CardDescription>
+                  Total items to be purchased grouped by category
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {procurementSummary.length > 0 ? (
+                  <div className="space-y-6">
+                    {procurementSummary.map((category, idx) => (
+                      <div key={idx} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-food-orange text-white">
+                            {category.category}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {category.items.reduce((sum, item) => sum + item.quantity, 0)} items total
+                          </span>
+                        </div>
+                        
+                        <div className="rounded-md border">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Item Name</TableHead>
+                                <TableHead className="text-right">Quantity</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {category.items.map((item, itemIdx) => (
+                                <TableRow key={itemIdx}>
+                                  <TableCell>{item.name}</TableCell>
+                                  <TableCell className="text-right font-medium">{item.quantity}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-6">No orders to display. Procurement data will appear once orders are placed.</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
           
           <TabsContent value="sales" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
