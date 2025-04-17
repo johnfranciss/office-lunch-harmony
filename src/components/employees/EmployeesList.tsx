@@ -16,22 +16,41 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Plus, Search } from "lucide-react";
+import { Plus, Trash2, Search } from "lucide-react";
 import { mockEmployees } from "@/data/mockData";
 import { useNavigate } from "react-router-dom";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 export function EmployeesList() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [employeeToDelete, setEmployeeToDelete] = useState<string | null>(null);
   const navigate = useNavigate();
   
   const filteredEmployees = mockEmployees.filter(
     (employee) => 
       employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.department.toLowerCase().includes(searchTerm.toLowerCase())
+      (employee.phoneNumber && employee.phoneNumber.includes(searchTerm))
   );
+
+  const handleDeleteEmployee = () => {
+    if (employeeToDelete) {
+      // Simulate API call for deletion
+      console.log("Deleting employee:", employeeToDelete);
+      toast.success("Employee deleted successfully");
+      setEmployeeToDelete(null);
+    }
+  };
 
   return (
     <Card className="w-full">
@@ -66,9 +85,7 @@ export function EmployeesList() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>ID/Phone Number</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -76,27 +93,16 @@ export function EmployeesList() {
               {filteredEmployees.map((employee) => (
                 <TableRow key={employee.id}>
                   <TableCell className="font-medium">{employee.name}</TableCell>
-                  <TableCell>{employee.email}</TableCell>
-                  <TableCell>{employee.department}</TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant={employee.active ? "outline" : "secondary"}
-                      className={employee.active 
-                        ? "bg-green-50 text-food-green-dark border-food-green" 
-                        : "bg-gray-100 text-gray-500"
-                      }
-                    >
-                      {employee.active ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
+                  <TableCell>{employee.phoneNumber || "N/A"}</TableCell>
                   <TableCell className="text-right">
                     <Button 
                       variant="ghost" 
-                      size="sm" 
-                      onClick={() => navigate(`/employees/edit/${employee.id}`)}
+                      size="sm"
+                      onClick={() => setEmployeeToDelete(employee.id)}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
-                      <Edit className="h-4 w-4" />
-                      <span className="sr-only">Edit</span>
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Delete</span>
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -105,6 +111,29 @@ export function EmployeesList() {
           </Table>
         </div>
       </CardContent>
+
+      <AlertDialog 
+        open={Boolean(employeeToDelete)} 
+        onOpenChange={() => setEmployeeToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the employee from the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteEmployee}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
