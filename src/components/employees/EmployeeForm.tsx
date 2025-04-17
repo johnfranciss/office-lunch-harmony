@@ -22,8 +22,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { mockEmployees } from "@/data/mockData";
 import { toast } from "sonner";
+import { useMutation } from "@tanstack/react-query";
+import { createEmployee } from "@/lib/supabase/employees";
 
 const employeeFormSchema = z.object({
   name: z.string().min(2, {
@@ -38,6 +39,19 @@ export function EmployeeForm() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
+  const createMutation = useMutation({
+    mutationFn: createEmployee,
+    onSuccess: () => {
+      toast.success("Employee added successfully!");
+      navigate("/employees");
+    },
+    onError: (error) => {
+      setIsLoading(false);
+      toast.error("Failed to add employee");
+      console.error("Create error:", error);
+    }
+  });
+
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeFormSchema),
     defaultValues: {
@@ -48,14 +62,7 @@ export function EmployeeForm() {
 
   function onSubmit(data: EmployeeFormValues) {
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Form submitted:", data);
-      setIsLoading(false);
-      toast.success("Employee added successfully!");
-      navigate("/employees");
-    }, 1000);
+    createMutation.mutate(data);
   }
 
   return (

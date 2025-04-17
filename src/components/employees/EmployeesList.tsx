@@ -18,7 +18,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Search } from "lucide-react";
-import { mockEmployees } from "@/data/mockData";
 import { useNavigate } from "react-router-dom";
 import {
   AlertDialog,
@@ -31,24 +30,42 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getEmployees, deleteEmployee } from "@/lib/supabase/employees";
 
 export function EmployeesList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [employeeToDelete, setEmployeeToDelete] = useState<string | null>(null);
   const navigate = useNavigate();
-  
-  const filteredEmployees = mockEmployees.filter(
+  const queryClient = useQueryClient();
+
+  const { data: employees = [], isLoading } = useQuery({
+    queryKey: ['employees'],
+    queryFn: getEmployees
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteEmployee,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      toast.success("Employee deleted successfully");
+      setEmployeeToDelete(null);
+    },
+    onError: (error) => {
+      toast.error("Failed to delete employee");
+      console.error("Delete error:", error);
+    }
+  });
+
+  const filteredEmployees = employees.filter(
     (employee) => 
       employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (employee.phoneNumber && employee.phoneNumber.includes(searchTerm))
+      (employee.phone_number && employee.phone_number.includes(searchTerm))
   );
 
   const handleDeleteEmployee = () => {
     if (employeeToDelete) {
-      // Simulate API call for deletion
-      console.log("Deleting employee:", employeeToDelete);
-      toast.success("Employee deleted successfully");
-      setEmployeeToDelete(null);
+      deleteMutation.mutate(employeeToDelete);
     }
   };
 
@@ -90,23 +107,33 @@ export function EmployeesList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredEmployees.map((employee) => (
-                <TableRow key={employee.id}>
-                  <TableCell className="font-medium">{employee.name}</TableCell>
-                  <TableCell>{employee.phoneNumber || "N/A"}</TableCell>
-                  <TableCell className="text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => setEmployeeToDelete(employee.id)}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Delete</span>
-                    </Button>
-                  </TableCell>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center">Loading...</TableCell>
                 </TableRow>
-              ))}
+              ) : filteredEmployees.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center">No employees found</TableCell>
+                </TableRow>
+              ) : (
+                filteredEmployees.map((employee) => (
+                  <TableRow key={employee.id}>
+                    <TableCell className="font-medium">{employee.name}</TableCell>
+                    <TableCell>{employee.phone_number || "N/A"}</TableCell>
+                    <TableCell className="text-right">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => setEmployeeToDelete(employee.id)}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete</span>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
