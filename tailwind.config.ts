@@ -61,7 +61,27 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+                // Food-themed color palette
+                food: {
+                    orange: {
+                        DEFAULT: '#FF9F1C',
+                        light: '#FFBF69',
+                        dark: '#E76F51'
+                    },
+                    green: {
+                        DEFAULT: '#2EC4B6',
+                        light: '#CBF3F0',
+                        dark: '#0D9488'
+                    },
+                    neutral: {
+                        lightest: '#FFFFFF',
+                        light: '#F7F7F7',
+                        medium: '#E5E5E5',
+                        dark: '#4A4A4A',
+                        darkest: '#333333'
+                    }
+                }
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
