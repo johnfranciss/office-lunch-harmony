@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -22,6 +22,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { addMenuItem, getMenuItemById, updateMenuItem } from "@/lib/supabase/menu-items";
+import { useToast } from "@/hooks/use-toast";
 
 const menuItemFormSchema = z.object({
   name: z.string().min(2, {
@@ -39,6 +42,14 @@ export function MenuItemForm() {
   const { id } = useParams();
   const isEditing = Boolean(id);
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: menuItem, isLoading: isFetchingMenuItem } = useQuery({
+    queryKey: ['menu-item', id],
+    queryFn: () => id ? getMenuItemById(id) : null,
+    enabled: isEditing,
+  });
 
   const form = useForm<MenuItemFormValues>({
     resolver: zodResolver(menuItemFormSchema),
@@ -48,15 +59,80 @@ export function MenuItemForm() {
     },
   });
 
+  // Set form values when menu item data is loaded
+  useEffect(() => {
+    if (menuItem) {
+      form.reset({
+        name: menuItem.name,
+        price: menuItem.price,
+      });
+    }
+  }, [menuItem, form]);
+
+  // Add menu item mutation
+  const addMutation = useMutation({
+    mutationFn: addMenuItem,
+    onSuccess: () => {
+      setIsLoading(false);
+      toast({
+        title: "Success",
+        description: "Menu item has been added successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['menu-items'] });
+      navigate("/menu-items");
+    },
+    onError: (error) => {
+      setIsLoading(false);
+      toast({
+        title: "Error",
+        description: `Failed to add menu item: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Update menu item mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: Partial<MenuItemFormValues> }) => 
+      updateMenuItem(id, data),
+    onSuccess: () => {
+      setIsLoading(false);
+      toast({
+        title: "Success",
+        description: "Menu item has been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['menu-items'] });
+      queryClient.invalidateQueries({ queryKey: ['menu-item', id] });
+      navigate("/menu-items");
+    },
+    onError: (error) => {
+      setIsLoading(false);
+      toast({
+        title: "Error",
+        description: `Failed to update menu item: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive",
+      });
+    }
+  });
+
   function onSubmit(data: MenuItemFormValues) {
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Form submitted:", data);
-      setIsLoading(false);
-      navigate("/menu-items");
-    }, 1000);
+    if (isEditing && id) {
+      updateMutation.mutate({ id, data });
+    } else {
+      addMutation.mutate(data);
+    }
+  }
+
+  if (isEditing && isFetchingMenuItem) {
+    return (
+      <Card className="max-w-2xl mx-auto">
+        <CardContent className="py-10 text-center">
+          Loading menu item...
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

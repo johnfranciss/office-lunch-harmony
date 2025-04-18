@@ -9,20 +9,69 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Edit, Plus, Search } from "lucide-react";
+import { Edit, Plus, Search, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/formatters";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getMenuItems, deleteMenuItem } from "@/lib/supabase/menu-items";
+import { MenuItem } from "@/types";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export function MenuItemsList() {
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [itemToDelete, setItemToDelete] = useState<MenuItem | null>(null);
   
-  // We'll fetch menu items from Supabase later
-  const menuItems = [];
+  // Fetch menu items from Supabase
+  const { data: menuItems = [], isLoading, error } = useQuery({
+    queryKey: ['menu-items'],
+    queryFn: getMenuItems
+  });
 
+  // Delete menu item mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteMenuItem(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['menu-items'] });
+      toast({
+        title: "Item deleted",
+        description: "The menu item has been successfully deleted.",
+      });
+      setItemToDelete(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete menu item: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Filter menu items based on search term
   const filteredMenuItems = menuItems.filter(
     (item) => item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = () => {
+    if (itemToDelete) {
+      deleteMutation.mutate(itemToDelete.id);
+    }
+  };
 
   return (
     <Card className="w-full">
@@ -52,30 +101,78 @@ export function MenuItemsList() {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredMenuItems.map((item) => (
-            <Card key={item.id} className="overflow-hidden">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-center mb-2">
-                  <div className="font-semibold">{item.name}</div>
-                  <div className="font-medium text-food-orange">
-                    {formatCurrency(item.price)}
+        {isLoading && (
+          <div className="text-center py-8">Loading menu items...</div>
+        )}
+
+        {error && (
+          <div className="text-center py-8 text-destructive">
+            Error loading menu items. Please try again.
+          </div>
+        )}
+
+        {!isLoading && !error && filteredMenuItems.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            {searchTerm ? "No items match your search." : "No menu items found. Add your first item!"}
+          </div>
+        )}
+
+        {!isLoading && !error && filteredMenuItems.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredMenuItems.map((item) => (
+              <Card key={item.id} className="overflow-hidden">
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="font-semibold">{item.name}</div>
+                    <div className="font-medium text-food-orange">
+                      {formatCurrency(item.price)}
+                    </div>
                   </div>
-                </div>
-                <div className="flex justify-end">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate(`/menu-items/edit/${item.id}`)}
-                  >
-                    <Edit className="h-4 w-4" />
-                    <span className="sr-only">Edit</span>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(`/menu-items/edit/${item.id}`)}
+                    >
+                      <Edit className="h-4 w-4" />
+                      <span className="sr-only">Edit</span>
+                    </Button>
+                    
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setItemToDelete(item)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Menu Item</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{item.name}"? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={handleDeleteConfirm}
+                            className="bg-destructive hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

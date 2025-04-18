@@ -1,240 +1,175 @@
-
-import { useState } from "react";
-import { MainLayout } from "@/components/layout/MainLayout";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { mockOrders } from "@/data/mockData";
-import { formatCurrency, formatDateTime } from "@/lib/formatters";
-import { Button } from "@/components/ui/button";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { AlertCircle, CheckCircle2, Receipt, User } from "lucide-react";
+import { formatCurrency, formatDate, formatDateTime } from "@/lib/formatters";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getOrderById } from "@/lib/supabase/orders";
+import { Order } from "@/types";
+import { MainLayout } from "@/components/layout/MainLayout";
 
 export default function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const order = mockOrders.find(order => order.id === id);
+  const [order, setOrder] = useState<Order | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  if (!order) {
+  const { data: orderData, isLoading: isOrderLoading, error: orderError } = useQuery({
+    queryKey: ['order', id],
+    queryFn: () => getOrderById(id as string),
+    enabled: !!id,
+  });
+
+  useEffect(() => {
+    if (orderData) {
+      setOrder(orderData);
+      setIsLoading(false);
+    }
+
+    if (orderError) {
+      setError(orderError);
+      setIsLoading(false);
+    }
+  }, [orderData, orderError]);
+
+  if (isLoading) {
     return (
       <MainLayout>
-        <div className="flex flex-col items-center justify-center h-[60vh]">
-          <h1 className="text-2xl font-bold">Order Not Found</h1>
-          <p className="text-muted-foreground mb-4">
-            The order you're looking for doesn't exist.
-          </p>
-          <Button onClick={() => navigate("/orders")}>
-            Back to Orders
-          </Button>
+        <div className="flex justify-center items-center h-full">
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Loading order details...
         </div>
       </MainLayout>
     );
   }
 
-  const getPaymentStatusDetails = (status: string) => {
-    switch (status) {
-      case "completed":
-        return { 
-          label: "Completed",
-          description: "Payment complete",
-          classes: "bg-green-50 text-food-green-dark border-food-green",
-          icon: CheckCircle2
-        };
-      case "employee-debt":
-        return { 
-          label: "Employee Debt", 
-          description: `${order.employee?.name} owes ${formatCurrency(Math.abs(order.changeAmount))}`,
-          classes: "bg-red-50 text-red-700 border-red-200",
-          icon: AlertCircle
-        };
-      case "office-credit":
-        return { 
-          label: "Office Credit", 
-          description: `Office owes ${order.employee?.name} ${formatCurrency(order.changeAmount)}`,
-          classes: "bg-amber-50 text-amber-700 border-amber-200",
-          icon: AlertCircle
-        };
-      default:
-        return { 
-          label: status, 
-          description: "",
-          classes: "",
-          icon: CheckCircle2
-        };
-    }
-  };
+  if (error) {
+    return (
+      <MainLayout>
+        <div className="flex justify-center items-center h-full text-red-500">
+          Error: {error.message}
+        </div>
+      </MainLayout>
+    );
+  }
 
-  const statusDetails = getPaymentStatusDetails(order.paymentStatus);
+  if (!order) {
+    return (
+      <MainLayout>
+        <div className="flex justify-center items-center h-full">
+          Order not found.
+        </div>
+      </MainLayout>
+    );
+  }
 
-  const handleResolvePayment = () => {
-    setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Resolve payment for order:", order.id);
-      setIsLoading(false);
-      navigate("/orders");
-    }, 1000);
-  };
+  const { employee, items, total, amountPaid, changeAmount, paymentStatus, orderDate, createdAt, updatedAt } = order;
 
   return (
     <MainLayout>
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Order Details
-            </h1>
-            <p className="text-muted-foreground">
-              Order #{id}
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            onClick={() => navigate("/orders")}
-          >
+        <div>
+          <Button variant="ghost" onClick={() => navigate("/orders")}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Orders
           </Button>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Receipt className="h-5 w-5" /> 
-                Order Items
-              </CardTitle>
-              <CardDescription>
-                Items included in this order
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Item</TableHead>
-                    <TableHead className="text-right">Price</TableHead>
-                    <TableHead className="text-center">Qty</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {order.items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.menuItem?.name}</TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(item.unitPrice)}
+
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Order Details</CardTitle>
+            <CardDescription>
+              View details for order #{order.id}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h3 className="text-lg font-semibold">Employee Information</h3>
+                <p className="text-sm text-muted-foreground">Name: {employee?.name}</p>
+                <p className="text-sm text-muted-foreground">Phone: {employee?.phone_number || 'N/A'}</p>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Order Information</h3>
+                <p className="text-sm text-muted-foreground">Order Date: {formatDate(new Date(orderDate))}</p>
+                <p className="text-sm text-muted-foreground">Created At: {formatDateTime(new Date(createdAt))}</p>
+                <p className="text-sm text-muted-foreground">Updated At: {formatDateTime(new Date(updatedAt))}</p>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold">Order Items</h3>
+              <div className="border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Item</TableHead>
+                      <TableHead className="text-right">Price</TableHead>
+                      <TableHead className="text-center">Quantity</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{item.menuItem?.name}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(item.unitPrice)}</TableCell>
+                        <TableCell className="text-center">{item.quantity}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(item.totalPrice)}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-right font-medium">
+                        Order Total:
                       </TableCell>
-                      <TableCell className="text-center">{item.quantity}</TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(item.totalPrice)}
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(total)}
                       </TableCell>
                     </TableRow>
-                  ))}
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-right font-medium">
-                      Order Total:
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(order.total)}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
 
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Employee Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
+            <div className="border rounded-md p-4 bg-muted/30">
+              <h3 className="text-lg font-semibold">Payment Information</h3>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Name</p>
-                  <p className="font-medium">{order.employee?.name}</p>
+                  <p className="text-sm text-muted-foreground">Amount Paid</p>
+                  <p className="font-medium">{formatCurrency(amountPaid)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Department</p>
-                  <p>{order.employee?.department}</p>
+                  <p className="text-sm text-muted-foreground">Change</p>
+                  <p className="font-medium">{formatCurrency(changeAmount)}</p>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Order Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Order Date</p>
-                  <p>{formatDateTime(order.orderDate)}</p>
-                </div>
-                <div>
+                <div className="col-span-2">
                   <p className="text-sm text-muted-foreground">Payment Status</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge 
-                      variant="outline"
-                      className={cn(statusDetails.classes)}
-                    >
-                      {statusDetails.label}
-                    </Badge>
-                  </div>
-                  {statusDetails.description && (
-                    <p className="text-sm mt-1">{statusDetails.description}</p>
-                  )}
+                  <p className="font-medium">
+                    {paymentStatus === "completed" && "✅ Completed"}
+                    {paymentStatus === "employee-debt" && "🔴 Employee Debt"}
+                    {paymentStatus === "office-credit" && "🔴 Office Credit"}
+                  </p>
                 </div>
-                <div className="pt-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Order Total</p>
-                      <p className="font-medium">{formatCurrency(order.total)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Amount Paid</p>
-                      <p className="font-medium">{formatCurrency(order.amountPaid)}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-sm text-muted-foreground">Change/Balance</p>
-                      <p className="font-medium">{formatCurrency(order.changeAmount)}</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-              {order.paymentStatus !== "completed" && (
-                <CardFooter>
-                  <Button 
-                    className="w-full bg-food-green hover:bg-food-green-dark"
-                    disabled={isLoading}
-                    onClick={handleResolvePayment}
-                  >
-                    {isLoading ? "Processing..." : "Resolve Payment"}
-                  </Button>
-                </CardFooter>
-              )}
-            </Card>
-          </div>
-        </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </MainLayout>
   );

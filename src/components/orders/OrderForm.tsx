@@ -37,12 +37,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { mockMenuItems } from "@/data/mockData";
 import { formatCurrency } from "@/lib/formatters";
 import { MinusCircle, Plus, Trash2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getEmployees } from "@/lib/supabase/employees";
-import { Employee } from "@/types";
+import { Employee, MenuItem } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
 
 const orderFormSchema = z.object({
   employeeId: z.string({
@@ -68,12 +68,31 @@ export function OrderForm() {
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [itemQuantity, setItemQuantity] = useState<number>(1);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
 
   // Fetch employees from Supabase
   const { data: employees = [], isLoading: isEmployeesLoading } = useQuery({
     queryKey: ['employees'],
     queryFn: getEmployees
   });
+
+  // Fetch menu items from Supabase
+  useEffect(() => {
+    async function fetchMenuItems() {
+      const { data, error } = await supabase
+        .from('menu_items')
+        .select('*');
+      
+      if (error) {
+        console.error('Error fetching menu items:', error);
+        return;
+      }
+      
+      setMenuItems(data || []);
+    }
+    
+    fetchMenuItems();
+  }, []);
 
   const totalOrderAmount = orderItems.reduce((sum, item) => sum + item.totalPrice, 0);
 
@@ -95,7 +114,7 @@ export function OrderForm() {
   function handleAddItem() {
     if (!selectedItemId || itemQuantity <= 0) return;
 
-    const menuItem = mockMenuItems.find(item => item.id === selectedItemId);
+    const menuItem = menuItems.find(item => item.id === selectedItemId);
     if (!menuItem) return;
 
     const totalPrice = menuItem.price * itemQuantity;
@@ -124,7 +143,7 @@ export function OrderForm() {
     if (newQuantity <= 0) return;
     
     const newItems = [...orderItems];
-    const menuItem = mockMenuItems.find(item => item.id === newItems[index].menuItemId);
+    const menuItem = menuItems.find(item => item.id === newItems[index].menuItemId);
     
     if (!menuItem) return;
     
@@ -219,13 +238,11 @@ export function OrderForm() {
                       <SelectValue placeholder="Select menu item" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockMenuItems
-                        .filter(item => item.available)
-                        .map((item) => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item.name} ({formatCurrency(item.price)})
-                          </SelectItem>
-                        ))}
+                      {menuItems.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name} ({formatCurrency(item.price)})
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -262,7 +279,7 @@ export function OrderForm() {
                     </TableHeader>
                     <TableBody>
                       {orderItems.map((item, index) => {
-                        const menuItem = mockMenuItems.find(mi => mi.id === item.menuItemId);
+                        const menuItem = menuItems.find(mi => mi.id === item.menuItemId);
                         return (
                           <TableRow key={index}>
                             <TableCell>{menuItem?.name}</TableCell>
@@ -344,7 +361,7 @@ export function OrderForm() {
                       <FormLabel>Amount Paid</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <span className="absolute left-3 top-2.5">$</span>
+                          <span className="absolute left-3 top-2.5">Rs.</span>
                           <Input 
                             type="number"
                             step="0.01" 
