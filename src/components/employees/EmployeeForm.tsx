@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useMutation } from "@tanstack/react-query";
-import { createEmployee } from "@/lib/supabase/employees";
+import { createEmployee, EmployeeInput } from "@/lib/supabase/employees";
 
 const employeeFormSchema = z.object({
   name: z.string().min(2, {
@@ -62,7 +62,12 @@ export function EmployeeForm() {
 
   function onSubmit(data: EmployeeFormValues) {
     setIsLoading(true);
-    createMutation.mutate(data);
+    // Ensure name is always provided as required by EmployeeInput type
+    const employeeData: EmployeeInput = {
+      name: data.name,
+      idOrPhone: data.idOrPhone
+    };
+    createMutation.mutate(employeeData);
   }
 
   return (
