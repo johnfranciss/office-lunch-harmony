@@ -37,9 +37,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { mockEmployees, mockMenuItems } from "@/data/mockData";
+import { mockMenuItems } from "@/data/mockData";
 import { formatCurrency } from "@/lib/formatters";
 import { MinusCircle, Plus, Trash2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getEmployees } from "@/lib/supabase/employees";
+import { Employee } from "@/types";
 
 const orderFormSchema = z.object({
   employeeId: z.string({
@@ -65,6 +68,12 @@ export function OrderForm() {
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [itemQuantity, setItemQuantity] = useState<number>(1);
+
+  // Fetch employees from Supabase
+  const { data: employees = [], isLoading: isEmployeesLoading } = useQuery({
+    queryKey: ['employees'],
+    queryFn: getEmployees
+  });
 
   const totalOrderAmount = orderItems.reduce((sum, item) => sum + item.totalPrice, 0);
 
@@ -177,13 +186,19 @@ export function OrderForm() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {mockEmployees
-                        .filter(employee => employee.active)
-                        .map((employee) => (
-                          <SelectItem key={employee.id} value={employee.id}>
-                            {employee.name} ({employee.department})
-                          </SelectItem>
-                        ))}
+                      {isEmployeesLoading ? (
+                        <SelectItem value="loading" disabled>Loading employees...</SelectItem>
+                      ) : employees.length === 0 ? (
+                        <SelectItem value="none" disabled>No employees found</SelectItem>
+                      ) : (
+                        employees
+                          .filter(employee => employee.active)
+                          .map((employee) => (
+                            <SelectItem key={employee.id} value={employee.id}>
+                              {employee.name}
+                            </SelectItem>
+                          ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
