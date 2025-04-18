@@ -1,15 +1,12 @@
-
 // Types for the application
 
 export interface Employee {
   id: string;
   name: string;
-  email: string;
-  department: string;
-  phoneNumber?: string;
+  phone_number?: string;
   active: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface MenuItem {

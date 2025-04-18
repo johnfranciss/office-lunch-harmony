@@ -1,5 +1,4 @@
 
-import { Employee } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
 export type EmployeeInput = {

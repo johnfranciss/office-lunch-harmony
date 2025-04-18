@@ -32,6 +32,7 @@ import {
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getEmployees, deleteEmployee } from "@/lib/supabase/employees";
+import { Employee } from "@/types";
 
 export function EmployeesList() {
   const [searchTerm, setSearchTerm] = useState("");
