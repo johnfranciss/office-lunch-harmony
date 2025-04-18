@@ -1,4 +1,3 @@
-// Types for the application
 
 export interface Employee {
   id: string;
@@ -12,15 +11,18 @@ export interface Employee {
 export interface MenuItem {
   id: string;
   name: string;
-  description: string;
   price: number;
-  category: string;
-  image?: string;
-  available: boolean;
-  startDate?: Date;
-  endDate?: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface OrderItem {
+  id: string;
+  menuItemId: string;
+  menuItem?: MenuItem;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
 }
 
 export interface Order {
@@ -35,13 +37,4 @@ export interface Order {
   orderDate: Date;
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface OrderItem {
-  id: string;
-  menuItemId: string;
-  menuItem?: MenuItem;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
 }
