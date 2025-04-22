@@ -71,7 +71,13 @@ export function MenuItemForm() {
 
   // Add menu item mutation
   const addMutation = useMutation({
-    mutationFn: addMenuItem,
+    mutationFn: (data: MenuItemFormValues) => {
+      // Make sure we pass the required fields for a new menu item
+      return addMenuItem({
+        name: data.name,
+        price: data.price,
+      });
+    },
     onSuccess: () => {
       setIsLoading(false);
       toast({
@@ -93,8 +99,12 @@ export function MenuItemForm() {
 
   // Update menu item mutation
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string, data: Partial<MenuItemFormValues> }) => 
-      updateMenuItem(id, data),
+    mutationFn: ({ id, data }: { id: string, data: MenuItemFormValues }) => {
+      return updateMenuItem(id, {
+        name: data.name,
+        price: data.price,
+      });
+    },
     onSuccess: () => {
       setIsLoading(false);
       toast({

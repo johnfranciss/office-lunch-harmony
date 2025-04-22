@@ -34,3 +34,18 @@ export const formatDateTime = (date: Date): string => {
     minute: '2-digit',
   }).format(date);
 };
+
+/**
+ * Format raw order data from Supabase into the Order type
+ */
+export const formatOrderData = (data: any): any => {
+  if (!data) return null;
+  
+  return {
+    ...data,
+    orderDate: new Date(data.orderDate),
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
+    // Map any other fields if necessary
+  };
+};
