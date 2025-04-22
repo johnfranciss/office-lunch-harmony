@@ -12,8 +12,8 @@ export interface MenuItem {
   id: string;
   name: string;
   price: number;
-  created_at: Date;
-  updated_at: Date;
+  created_at: Date | string;
+  updated_at: Date | string;
 }
 
 export interface OrderItem {
