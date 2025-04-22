@@ -34,9 +34,17 @@ export async function getMenuItems(): Promise<MenuItem[]> {
  * Add a new menu item to Supabase
  */
 export async function addMenuItem(item: Omit<MenuItem, 'id' | 'created_at' | 'updated_at'>): Promise<MenuItem> {
+  // Using explicit console logs for debugging
+  console.log('Adding menu item:', item);
+  
   const { data, error } = await supabase
     .from('menu_items')
-    .insert([item])
+    .insert([
+      {
+        name: item.name,
+        price: item.price
+      }
+    ])
     .select()
     .single();
   
@@ -45,6 +53,7 @@ export async function addMenuItem(item: Omit<MenuItem, 'id' | 'created_at' | 'up
     throw new Error(error.message);
   }
   
+  console.log('Menu item added successfully:', data);
   return toMenuItem(data);
 }
 
@@ -52,6 +61,8 @@ export async function addMenuItem(item: Omit<MenuItem, 'id' | 'created_at' | 'up
  * Update an existing menu item in Supabase
  */
 export async function updateMenuItem(id: string, item: Partial<Omit<MenuItem, 'id' | 'created_at' | 'updated_at'>>): Promise<MenuItem> {
+  console.log('Updating menu item:', id, item);
+  
   const { data, error } = await supabase
     .from('menu_items')
     .update(item)
@@ -64,6 +75,7 @@ export async function updateMenuItem(id: string, item: Partial<Omit<MenuItem, 'i
     throw new Error(error.message);
   }
   
+  console.log('Menu item updated successfully:', data);
   return toMenuItem(data);
 }
 
@@ -71,6 +83,8 @@ export async function updateMenuItem(id: string, item: Partial<Omit<MenuItem, 'i
  * Delete a menu item from Supabase
  */
 export async function deleteMenuItem(id: string): Promise<void> {
+  console.log('Deleting menu item:', id);
+  
   const { error } = await supabase
     .from('menu_items')
     .delete()
@@ -80,6 +94,8 @@ export async function deleteMenuItem(id: string): Promise<void> {
     console.error('Error deleting menu item:', error);
     throw new Error(error.message);
   }
+  
+  console.log('Menu item deleted successfully');
 }
 
 /**
