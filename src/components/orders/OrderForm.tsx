@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import {
   Form,
   FormControl,
@@ -41,6 +42,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { MinusCircle, Plus, Trash2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getEmployees } from "@/lib/supabase/employees";
+import { createOrder } from "@/lib/supabase/orders";
 import { Employee, MenuItem } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -153,7 +155,7 @@ export function OrderForm() {
     setOrderItems(newItems);
   }
 
-  function onSubmit(data: OrderFormValues) {
+  async function onSubmit(data: OrderFormValues) {
     if (orderItems.length === 0) {
       form.setError("root", {
         type: "manual",
@@ -164,18 +166,25 @@ export function OrderForm() {
 
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Order submitted:", {
-        ...data,
+    try {
+      // Submit the order to Supabase
+      const order = await createOrder(
+        data.employeeId,
         orderItems,
-        totalAmount: totalOrderAmount,
+        totalOrderAmount,
+        data.amountPaid,
         changeAmount,
-        paymentStatus,
-      });
-      setIsLoading(false);
+        paymentStatus
+      );
+      
+      toast.success("Order placed successfully!");
       navigate("/orders");
-    }, 1000);
+    } catch (error) {
+      console.error("Error creating order:", error);
+      toast.error("Failed to create order. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (

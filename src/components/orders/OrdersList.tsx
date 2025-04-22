@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Table, 
   TableBody, 
@@ -19,21 +19,29 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye, Plus, Search } from "lucide-react";
-import { mockOrders } from "@/data/mockData";
 import { formatCurrency } from "@/lib/formatters";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { getOrders } from "@/lib/supabase/orders";
+import { Order } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function OrdersList() {
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
   
-  const filteredOrders = mockOrders.filter(
+  const { data: orders = [], isLoading, error } = useQuery({
+    queryKey: ['orders'],
+    queryFn: getOrders
+  });
+
+  const filteredOrders = orders.filter(
     (order) => 
-      order.employee?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.paymentStatus.toLowerCase().includes(searchTerm.toLowerCase())
+      (order.employee?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (order.id?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (order.paymentStatus?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
   const getPaymentStatusDetails = (status: string) => {
@@ -48,6 +56,20 @@ export function OrdersList() {
         return { label: status, variant: "outline", classes: "" };
     }
   };
+
+  if (error) {
+    console.error("Error loading orders:", error);
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Orders</CardTitle>
+          <CardDescription>
+            There was an error loading orders. Please try again.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full">
@@ -91,41 +113,61 @@ export function OrdersList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredOrders.map((order) => {
-                const statusDetails = getPaymentStatusDetails(order.paymentStatus);
-                
-                return (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.id}</TableCell>
-                    <TableCell>{order.employee?.name}</TableCell>
-                    <TableCell>{format(order.orderDate, "MMM d, h:mm a")}</TableCell>
-                    <TableCell>
-                      {order.items.length} {order.items.length === 1 ? "item" : "items"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(order.total)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant="outline"
-                        className={cn(statusDetails.classes)}
-                      >
-                        {statusDetails.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => navigate(`/orders/${order.id}`)}
-                      >
-                        <Eye className="h-4 w-4" />
-                        <span className="sr-only">View</span>
-                      </Button>
-                    </TableCell>
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, index) => (
+                  <TableRow key={`loading-${index}`}>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
                   </TableRow>
-                );
-              })}
+                ))
+              ) : filteredOrders.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center">
+                    {searchTerm ? "No orders match your search" : "No orders found"}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredOrders.map((order) => {
+                  const statusDetails = getPaymentStatusDetails(order.paymentStatus);
+                  
+                  return (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{order.id.substring(0, 8)}...</TableCell>
+                      <TableCell>{order.employee?.name}</TableCell>
+                      <TableCell>{format(new Date(order.orderDate), "MMM d, h:mm a")}</TableCell>
+                      <TableCell>
+                        {order.items.length} {order.items.length === 1 ? "item" : "items"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(order.total)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant="outline"
+                          className={cn(statusDetails.classes)}
+                        >
+                          {statusDetails.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => navigate(`/orders/${order.id}`)}
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span className="sr-only">View</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
             </TableBody>
           </Table>
         </div>
