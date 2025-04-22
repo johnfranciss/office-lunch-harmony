@@ -44,10 +44,36 @@ export const formatOrderData = (data: any): any => {
   if (!data) return null;
   
   return {
-    ...data,
-    orderDate: new Date(data.orderDate),
+    id: data.id,
+    employeeId: data.employee_id,
+    employee: data.employee ? {
+      id: data.employee.id,
+      name: data.employee.name,
+      phone_number: data.employee.phone_number,
+      active: data.employee.active,
+      created_at: data.employee.created_at,
+      updated_at: data.employee.updated_at
+    } : undefined,
+    items: (data.items || []).map((item: any) => ({
+      id: item.id,
+      menuItemId: item.menu_item_id,
+      menuItem: item.menuItem ? {
+        id: item.menuItem.id,
+        name: item.menuItem.name,
+        price: item.menuItem.price,
+        created_at: item.menuItem.created_at,
+        updated_at: item.menuItem.updated_at
+      } : undefined,
+      quantity: item.quantity,
+      unitPrice: item.unit_price,
+      totalPrice: item.total_price
+    })),
+    total: data.total,
+    amountPaid: data.amount_paid,
+    changeAmount: data.change_amount,
+    paymentStatus: data.payment_status,
+    orderDate: new Date(data.order_date),
     createdAt: new Date(data.created_at),
-    updatedAt: new Date(data.updated_at),
-    // Map any other fields if necessary
+    updatedAt: new Date(data.updated_at)
   };
 };

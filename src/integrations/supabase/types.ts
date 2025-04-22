@@ -60,6 +60,98 @@ export type Database = {
         }
         Relationships: []
       }
+      order_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          menu_item_id: string
+          order_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          menu_item_id: string
+          order_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          menu_item_id?: string
+          order_id?: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          amount_paid: number
+          change_amount: number
+          created_at: string | null
+          employee_id: string
+          id: string
+          order_date: string | null
+          payment_status: string
+          total: number
+          updated_at: string | null
+        }
+        Insert: {
+          amount_paid?: number
+          change_amount?: number
+          created_at?: string | null
+          employee_id: string
+          id?: string
+          order_date?: string | null
+          payment_status: string
+          total?: number
+          updated_at?: string | null
+        }
+        Update: {
+          amount_paid?: number
+          change_amount?: number
+          created_at?: string | null
+          employee_id?: string
+          id?: string
+          order_date?: string | null
+          payment_status?: string
+          total?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
