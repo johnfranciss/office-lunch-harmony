@@ -4,7 +4,7 @@ import { Order, OrderItem } from "@/types";
 import { formatOrderData } from "@/lib/formatters";
 
 /**
- * Create a new order in Supabase
+ * Create or update an order in Supabase
  */
 export async function createOrder(
   employeeId: string,
@@ -12,9 +12,23 @@ export async function createOrder(
   total: number,
   amountPaid: number,
   changeAmount: number,
-  paymentStatus: "completed" | "employee-debt" | "office-credit"
+  paymentStatus: "completed" | "employee-debt" | "office-credit",
+  orderId?: string
 ): Promise<Order | null> {
-  // Start a Supabase transaction
+  // If orderId exists, update instead of create
+  if (orderId) {
+    return updateOrder(
+      orderId,
+      employeeId,
+      items,
+      total,
+      amountPaid,
+      changeAmount,
+      paymentStatus
+    );
+  }
+
+  // Start a Supabase transaction for new order
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert([{
@@ -52,6 +66,73 @@ export async function createOrder(
   }
 
   return getOrderById(order.id);
+}
+
+/**
+ * Update an existing order
+ */
+async function updateOrder(
+  orderId: string,
+  employeeId: string,
+  items: OrderItem[],
+  total: number,
+  amountPaid: number,
+  changeAmount: number,
+  paymentStatus: "completed" | "employee-debt" | "office-credit"
+): Promise<Order | null> {
+  try {
+    // First, update the order
+    const { error: orderError } = await supabase
+      .from('orders')
+      .update({
+        employee_id: employeeId,
+        total,
+        amount_paid: amountPaid,
+        change_amount: changeAmount,
+        payment_status: paymentStatus,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', orderId);
+
+    if (orderError) {
+      console.error('Error updating order:', orderError);
+      throw new Error(orderError.message);
+    }
+
+    // Delete all existing order items
+    const { error: deleteItemsError } = await supabase
+      .from('order_items')
+      .delete()
+      .eq('order_id', orderId);
+
+    if (deleteItemsError) {
+      console.error('Error deleting existing order items:', deleteItemsError);
+      throw new Error(deleteItemsError.message);
+    }
+
+    // Insert the new order items
+    const orderItems = items.map(item => ({
+      order_id: orderId,
+      menu_item_id: item.menuItemId,
+      quantity: item.quantity,
+      unit_price: item.unitPrice,
+      total_price: item.totalPrice
+    }));
+
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .insert(orderItems);
+
+    if (itemsError) {
+      console.error('Error creating new order items:', itemsError);
+      throw new Error(itemsError.message);
+    }
+
+    return getOrderById(orderId);
+  } catch (error) {
+    console.error("Error in updateOrder function:", error);
+    throw error;
+  }
 }
 
 /**
