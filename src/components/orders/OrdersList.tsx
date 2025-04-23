@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Table, 
@@ -93,6 +92,10 @@ export function OrdersList() {
     }
   };
 
+  const getTotalQuantity = (order: Order): number => {
+    return order.items.reduce((total, item) => total + item.quantity, 0);
+  };
+
   if (error) {
     console.error("Error loading orders:", error);
     return (
@@ -109,7 +112,6 @@ export function OrdersList() {
 
   return (
     <Card className="w-full">
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -133,7 +135,6 @@ export function OrdersList() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      {/* END Delete Dialog */}
 
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
@@ -196,6 +197,7 @@ export function OrdersList() {
               ) : (
                 filteredOrders.map((order) => {
                   const statusDetails = getPaymentStatusDetails(order.paymentStatus);
+                  const totalQuantity = getTotalQuantity(order);
                   
                   return (
                     <TableRow key={order.id}>
@@ -203,7 +205,7 @@ export function OrdersList() {
                       <TableCell>{order.employee?.name}</TableCell>
                       <TableCell>{format(new Date(order.orderDate), "MMM d, h:mm a")}</TableCell>
                       <TableCell>
-                        {order.items.length} {order.items.length === 1 ? "item" : "items"}
+                        {totalQuantity} {totalQuantity === 1 ? "item" : "items"}
                       </TableCell>
                       <TableCell className="text-right">
                         {formatCurrency(order.total)}
