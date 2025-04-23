@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Order, OrderItem } from "@/types";
 import { formatOrderData } from "@/lib/formatters";
@@ -101,4 +100,31 @@ export async function getOrderById(id: string): Promise<Order | null> {
   }
 
   return data ? formatOrderData(data) : null;
+}
+
+/**
+ * Delete an order by ID
+ */
+export async function deleteOrder(id: string): Promise<boolean> {
+  // Delete order_items first to maintain FK constraint
+  const { error: itemsError } = await supabase
+    .from("order_items")
+    .delete()
+    .eq("order_id", id);
+  if (itemsError) {
+    console.error("Error deleting order items:", itemsError);
+    return false;
+  }
+
+  const { error } = await supabase
+    .from("orders")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("Error deleting order:", error);
+    return false;
+  }
+
+  return true;
 }

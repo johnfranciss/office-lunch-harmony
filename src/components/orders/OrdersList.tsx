@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { 
   Table, 
   TableBody, 
@@ -18,20 +18,33 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, Plus, Search } from "lucide-react";
+import { Eye, Plus, Search, Edit, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { useQuery } from "@tanstack/react-query";
-import { getOrders } from "@/lib/supabase/orders";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getOrders, deleteOrder } from "@/lib/supabase/orders";
 import { Order } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { useState as useDialogState } from "react";
 
 export function OrdersList() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const navigate = useNavigate();
-  
+  const queryClient = useQueryClient();
+
   const { data: orders = [], isLoading, error } = useQuery({
     queryKey: ['orders'],
     queryFn: getOrders
@@ -57,6 +70,13 @@ export function OrdersList() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    await deleteOrder(deleteId);
+    setDeleteId(null);
+    queryClient.invalidateQueries({ queryKey: ['orders'] });
+  };
+
   if (error) {
     console.error("Error loading orders:", error);
     return (
@@ -73,6 +93,27 @@ export function OrdersList() {
 
   return (
     <Card className="w-full">
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteId} onOpenChange={open => !open && setDeleteId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Order</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this order? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="secondary">Cancel</Button>
+            </DialogClose>
+            <Button variant="destructive" onClick={handleDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* END Delete Dialog */}
+
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>Orders</CardTitle>
@@ -122,7 +163,7 @@ export function OrdersList() {
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-20 rounded-full" /></TableCell>
                   </TableRow>
                 ))
               ) : filteredOrders.length === 0 ? (
@@ -155,14 +196,32 @@ export function OrdersList() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => navigate(`/orders/${order.id}`)}
-                        >
-                          <Eye className="h-4 w-4" />
-                          <span className="sr-only">View</span>
-                        </Button>
+                        <div className="flex gap-1 justify-end">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => navigate(`/orders/${order.id}`)}
+                          >
+                            <Eye className="h-4 w-4" />
+                            <span className="sr-only">View</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(`/orders/edit/${order.id}`)}
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span className="sr-only">Edit</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeleteId(order.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                            <span className="sr-only">Delete</span>
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
