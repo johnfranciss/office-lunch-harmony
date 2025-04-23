@@ -28,20 +28,21 @@ import { getOrders, deleteOrder } from "@/lib/supabase/orders";
 import { Order } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { useState as useDialogState } from "react";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 export function OrdersList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -72,9 +73,24 @@ export function OrdersList() {
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    await deleteOrder(deleteId);
-    setDeleteId(null);
-    queryClient.invalidateQueries({ queryKey: ['orders'] });
+    
+    setIsDeleting(true);
+    try {
+      const success = await deleteOrder(deleteId);
+      
+      if (success) {
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
+        toast.success("Order deleted successfully");
+      } else {
+        toast.error("Failed to delete order");
+      }
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      toast.error("An error occurred while deleting the order");
+    } finally {
+      setDeleteId(null);
+      setIsDeleting(false);
+    }
   };
 
   if (error) {
@@ -94,24 +110,29 @@ export function OrdersList() {
   return (
     <Card className="w-full">
       {/* Delete Confirmation Dialog */}
-      <Dialog open={!!deleteId} onOpenChange={open => !open && setDeleteId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Order</DialogTitle>
-            <DialogDescription>
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Order</AlertDialogTitle>
+            <AlertDialogDescription>
               Are you sure you want to delete this order? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="secondary">Cancel</Button>
-            </DialogClose>
-            <Button variant="destructive" onClick={handleDelete}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }} 
+              className="bg-red-600 hover:bg-red-700"
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {/* END Delete Dialog */}
 
       <CardHeader className="flex flex-row items-center justify-between">
