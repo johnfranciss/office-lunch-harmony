@@ -2,8 +2,16 @@
 import { DashboardCards } from "@/components/dashboard/DashboardCards";
 import { RecentOrders } from "@/components/dashboard/RecentOrders";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { useQuery } from "@tanstack/react-query";
+import { getOrders } from "@/lib/supabase/orders";
 
 export default function Dashboard() {
+  // Pre-fetch orders to avoid multiple fetches across components
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: ['orders'],
+    queryFn: getOrders
+  });
+
   return (
     <MainLayout>
       <div className="space-y-4">

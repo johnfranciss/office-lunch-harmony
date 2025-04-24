@@ -1,14 +1,12 @@
-
 /**
  * Format a number as a currency string
  */
 export const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
+  // Use Rs. prefix instead of ₹ symbol
+  return `Rs. ${value.toLocaleString('en-IN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })}`;
 };
 
 /**
