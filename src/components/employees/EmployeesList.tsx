@@ -53,7 +53,7 @@ export function EmployeesList() {
       setEmployeeToDelete(null);
     },
     onError: (error) => {
-      toast.error("Failed to delete employee");
+      toast.error("Failed to delete employee: " + (error instanceof Error ? error.message : "Unknown error"));
       console.error("Delete error:", error);
     }
   });
@@ -142,7 +142,9 @@ export function EmployeesList() {
 
       <AlertDialog 
         open={Boolean(employeeToDelete)} 
-        onOpenChange={() => setEmployeeToDelete(null)}
+        onOpenChange={(open) => {
+          if (!open) setEmployeeToDelete(null);
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>

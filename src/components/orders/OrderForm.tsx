@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
@@ -40,11 +39,12 @@ import {
 } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/formatters";
 import { MinusCircle, Plus, Trash2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getEmployees } from "@/lib/supabase/employees";
 import { createOrder, getOrderById } from "@/lib/supabase/orders";
 import { Employee, MenuItem, Order } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
+import { getMenuItemsRaw } from "@/lib/supabase/menu-items";
 
 const orderFormSchema = z.object({
   employeeId: z.string({ required_error: "Please select an employee." }),
@@ -76,6 +76,7 @@ export function OrderForm() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [existingOrder, setExistingOrder] = useState<Order | null>(null);
   const [isLoadingOrder, setIsLoadingOrder] = useState(isEditMode);
+  const queryClient = useQueryClient();
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderFormSchema),
@@ -85,6 +86,12 @@ export function OrderForm() {
       amountPaidBackByOfficeBoy: 0,
     },
   });
+
+  // Refresh data when component mounts
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['employees'] });
+    queryClient.invalidateQueries({ queryKey: ['menu-items'] });
+  }, [queryClient]);
 
   // Load existing order data if in edit mode
   useEffect(() => {
@@ -131,19 +138,34 @@ export function OrderForm() {
     queryFn: getEmployees
   });
 
+  // Use React Query to fetch menu items instead of direct Supabase call
+  const { data: fetchedMenuItems = [], isLoading: isMenuItemsLoading } = useQuery({
+    queryKey: ['menu-items'],
+    queryFn: getMenuItemsRaw
+  });
+
+  // Update the menu items state whenever the fetched data changes
   useEffect(() => {
-    async function fetchMenuItems() {
-      const { data, error } = await supabase
-        .from('menu_items')
-        .select('*');
-      if (error) {
-        console.error('Error fetching menu items:', error);
-        return;
-      }
-      setMenuItems(data || []);
+    setMenuItems(fetchedMenuItems);
+    
+    // If we have order items, update their prices based on the latest menu item prices
+    if (orderItems.length > 0 && fetchedMenuItems.length > 0) {
+      const updatedOrderItems = orderItems.map(item => {
+        const updatedMenuItem = fetchedMenuItems.find(mi => mi.id === item.menuItemId);
+        if (updatedMenuItem && updatedMenuItem.price !== item.unitPrice) {
+          // Update the item with the latest price
+          return {
+            ...item,
+            unitPrice: updatedMenuItem.price,
+            totalPrice: updatedMenuItem.price * item.quantity
+          };
+        }
+        return item;
+      });
+      
+      setOrderItems(updatedOrderItems);
     }
-    fetchMenuItems();
-  }, []);
+  }, [fetchedMenuItems]);
 
   const totalOrderAmount = orderItems.reduce((sum, item) => sum + item.totalPrice, 0);
 
@@ -193,9 +215,13 @@ export function OrderForm() {
   function handleUpdateQuantity(index: number, newQuantity: number) {
     if (newQuantity <= 0) return;
     const newItems = [...orderItems];
+    // Get the most up-to-date price for the menu item
     const menuItem = menuItems.find(item => item.id === newItems[index].menuItemId);
     if (!menuItem) return;
+    
+    // Use the latest price from menuItems, not the potentially outdated price in orderItems
     newItems[index].quantity = newQuantity;
+    newItems[index].unitPrice = menuItem.price;
     newItems[index].totalPrice = menuItem.price * newQuantity;
     setOrderItems(newItems);
   }
@@ -435,9 +461,10 @@ export function OrderForm() {
                           <span className="absolute left-3 top-2.5">Rs.</span>
                           <Input 
                             type="number"
+                            inputMode="numeric"
                             min="0"
-                            step="0.01"
-                            placeholder="e.g. 0.00"
+                            step="1"
+                            placeholder="e.g. 0"
                             className="pl-7"
                             {...field} 
                           />
@@ -476,9 +503,10 @@ export function OrderForm() {
                           <span className="absolute left-3 top-2.5">Rs.</span>
                           <Input 
                             type="number"
+                            inputMode="numeric"
                             min="0"
-                            step="0.01"
-                            placeholder="e.g. 0.00"
+                            step="1"
+                            placeholder="e.g. 0"
                             className="pl-7"
                             {...field}
                           />

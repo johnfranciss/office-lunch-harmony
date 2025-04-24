@@ -1,7 +1,7 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Order, OrderItem } from "@/types";
 import { formatOrderData } from "@/lib/formatters";
+import { getMenuItemsRaw } from "@/lib/supabase/menu-items";
 
 /**
  * Create or update an order in Supabase
